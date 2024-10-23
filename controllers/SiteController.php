@@ -2,6 +2,7 @@
 
 namespace app\controllers;
 
+use app\models\User;
 use Yii;
 use yii\filters\AccessControl;
 use yii\web\Controller;
@@ -51,6 +52,10 @@ class SiteController extends Controller
                 'class' => 'yii\captcha\CaptchaAction',
                 'fixedVerifyCode' => YII_ENV_TEST ? 'testme' : null,
             ],
+            'auth' => [
+                'class' => 'yii\authclient\AuthAction',
+                'successCallback' => [$this, 'onAuthSuccess'],
+            ],
         ];
     }
 
@@ -64,11 +69,7 @@ class SiteController extends Controller
         return $this->render('index');
     }
 
-    /**
-     * Login action.
-     *
-     * @return Response|string
-     */
+
     public function actionLogin()
     {
         if (!Yii::$app->user->isGuest) {
@@ -80,9 +81,13 @@ class SiteController extends Controller
             return $this->goBack();
         }
 
+        $client = Yii::$app->authClientCollection->getClient('vkontakte');
+        $authUrl = $client->buildAuthUrl();
+
         $model->password = '';
         return $this->render('login', [
             'model' => $model,
+            'vkAuthUrl' => $authUrl
         ]);
     }
 
@@ -98,31 +103,22 @@ class SiteController extends Controller
         return $this->goHome();
     }
 
-    /**
-     * Displays contact page.
-     *
-     * @return Response|string
-     */
-    public function actionContact()
+    public function actionRegister()
     {
-        $model = new ContactForm();
-        if ($model->load(Yii::$app->request->post()) && $model->contact(Yii::$app->params['adminEmail'])) {
-            Yii::$app->session->setFlash('contactFormSubmitted');
+        $model = new User();
 
-            return $this->refresh();
+        if ($model->load(Yii::$app->request->post())) {
+            $model->setPassword(Yii::$app->request->post('User')['password_hash']);
+
+            if ($model->save()) {
+                return $this->redirect(['site/login']);
+            } else {
+                Yii::$app->session->setFlash('error', 'Не удалось зарегистрировать пользователя.');
+            }
         }
-        return $this->render('contact', [
+
+        return $this->render('register', [
             'model' => $model,
         ]);
-    }
-
-    /**
-     * Displays about page.
-     *
-     * @return string
-     */
-    public function actionAbout()
-    {
-        return $this->render('about');
     }
 }
