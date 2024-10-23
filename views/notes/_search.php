@@ -24,7 +24,7 @@ use yii\widgets\ActiveForm;
             'allowClear' => true,
             'multiple' => true
         ],
-    ]);
+    ])->label('Поиск по тегу');
     ?>
 
     <?php // echo $form->field($model, 'updated_at') ?>
